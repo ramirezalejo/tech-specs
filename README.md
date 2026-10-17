@@ -68,7 +68,7 @@ Solution Root
 │   ├── {Service}Service/    Worker services (queue consumers)
 │   ├── WebApi/              REST API (trigger/command entry point)
 │   ├── {Name}BFF/           Backend-for-Frontend (UI-facing API)
-│   └── HangFire.UI/        Job dashboard
+│   └── HangFire.UI/         Job dashboard
 │
 ├── Saga Projects
 │   └── {Project}.Saga/      Saga definitions & orchestration
@@ -191,7 +191,7 @@ Domain entities need consistent auditing, tracking, and lifecycle management acr
 - **Base classes** for cross-cutting entity concerns:
   - `AuditableEntity` — `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`
   - `ProcessedEntity` — extends auditable with Processing-specific timestamps
-- **Interfaces** for optional behaviors: `IAuditableEntity`, `IProcessededEntity`.
+- **Interfaces** for optional behaviors: `IAuditableEntity`, `IProcessedEntity`.
 - **Enums and Constants** co-located in Domain: `Domain/Enums/`, `Domain/Constants/`.
 - **Queue message contracts** defined in Domain: `IMessage`, `BaseMessage` with `Priority` enum.
 - **Naming**: Context-specific entity prefixes where disambiguation is needed (e.g., `Acc` for account/advertising entities).
@@ -451,7 +451,7 @@ Multiple external APIs (advertising platforms, proxy services, data providers) n
 
 ### Decision
 - **One project per external vendor**: `{VendorName}/` class library.
-- **HttpClientFactory** for all HTTP clients — named clients per region/purpose.
+- **IHttpClientFactory** for all HTTP clients — named clients per region/purpose.
 - **DelegatingHandler** for auth concerns (e.g., OAuth token refresh via `AuthenticationDelegatingHandler`).
 - **Polly resilience**: Retry with jittered backoff, bulkhead isolation.
 - **Resolver pattern**: `Func<string, IClient>` factory for region-based client resolution.
@@ -522,7 +522,7 @@ Consistent service lifetimes prevent subtle bugs (captive dependencies, thread-s
 
 | Lifetime | Use For | Examples |
 |----------|---------|---------|
-| **Singleton** | Stateless infrastructure, config, connection pools | `IConnectionMultiplexer`, `HttpClientFactory`, config objects |
+| **Singleton** | Stateless infrastructure, config, connection pools | `IConnectionMultiplexer`, `IHttpClientFactory`, config objects |
 | **Scoped** | Per-request/per-message state, ORM contexts | `DbContext`, repositories, `IRequestHandler`, `IFeatureManagerSnapshot` |
 | **Transient** | Stateless, lightweight, per-call creation | Factories, `IPipelineBehavior`, HTTP message handlers |
 
@@ -649,7 +649,7 @@ High-throughput systems need caching for performance and distributed locks for c
 - **Distributed locks**: RedLock algorithm via `RedLockNet` — used for:
   - Preventing duplicate message processing.
   - Coordinating multi-instance job execution.
-- **Fallback**: `IDistributedMemoryCache` for local dev without Redis.
+- **Fallback**: `MemoryDistributedCache` (registered via `AddDistributedMemoryCache()`) for local dev without Redis.
 - **Deduplication pattern**: Redis key with TTL — check before processing, set on start, clear on complete.
 
 ### Consequences
@@ -831,7 +831,7 @@ Spec for how to add new capabilities without breaking existing conventions.
 ### Adding a New External Integration
 1. Create `{VendorName}/` class library project.
 2. Define `I{VendorName}Client` interface.
-3. Implement with `HttpClientFactory` + Polly policies.
+3. Implement with `IHttpClientFactory` + Polly policies.
 4. Add DI extension in `Shared/Startup/`.
 5. Add test project `{VendorName}Tests/`.
 
